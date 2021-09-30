@@ -4,30 +4,39 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Base64
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
-import android.webkit.WebView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import java.io.IOException
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.NestedScrollView
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import java.io.InputStream
-import java.lang.Exception
-import android.webkit.ValueCallback
-
-
-
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
+
+    private val mOnNavigationItemSelectedListener =
+        BottomNavigationView.OnNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.bHome-> {
+                    onbHomeClick()
+                    return@OnNavigationItemSelectedListener true
+                }
+                R.id.bActive -> {
+                    onbActiveClick()
+                    return@OnNavigationItemSelectedListener true
+                }
+                R.id.bMessages -> {
+                    onbMessagesClick()
+                    return@OnNavigationItemSelectedListener true
+                }
+            }
+            false
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +46,11 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = SimpleWebViewClientImpl(this)
         webView.getSettings().setJavaScriptEnabled(true)
         webView.getSettings().cacheMode = WebSettings.LOAD_DEFAULT
-        onbHomeClick(null)
+
+        val navigation = findViewById<View>(R.id.navigation) as BottomNavigationView
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
+
+        onbHomeClick()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -48,15 +61,15 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
-    fun onbHomeClick(view: View?) {
+    fun onbHomeClick() {
         webView.loadUrl("https://www.club-volonterov.ru/phpBB3/index.php")
     }
 
-    fun onbActiveClick(view: View?) {
+    fun onbActiveClick() {
         webView.loadUrl("https://www.club-volonterov.ru/phpBB3/search.php?search_id=active_topics")
     }
 
-    fun onbMessagesClick(view: View?) {
+    fun onbMessagesClick() {
         webView.loadUrl("https://www.club-volonterov.ru/phpBB3/ucp.php?i=pm&folder=inbox")
     }
 }
@@ -64,8 +77,9 @@ class MainActivity : AppCompatActivity() {
 class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
     private var activity: Activity? = null
 
-    override fun onLoadResource(view: WebView, url: String?) {
+    override fun onLoadResource(view: WebView, url: String) {
         super.onLoadResource(view, url)
+        Log.e("res", url)
 
         injectCSS(view)
     }
@@ -82,52 +96,18 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
 
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
-//        view.visibility = View.INVISIBLE
 
-//        if (!url.contains("&mobapp")) {
-//            view.visibility = View.INVISIBLE
-//            var htmlData = ""
-//            var baseUrl = ""
-//            val cm: CookieManager = CookieManager.getInstance()
-//            val cookie = cm.getCookie(url)
-//
-//            GlobalScope.launch(Dispatchers.IO) {
-//                try {
-//                    val doc: Document = Jsoup.connect(url + if (url.contains("?")) "&mobapp" else "?&mobapp")
-//                        .header("Cookie", cookie)
-//                        .get()
-//                    doc.head().appendElement("link")
-//                        .attr("rel", "stylesheet")
-//                        .attr("type", "text/css")
-//                        .attr("href", "file:///android_asset/style.css")
-//                    htmlData = doc.html()
-//                    baseUrl = doc.baseUri()
-//                } catch (e: IOException) {
-//                    e.printStackTrace()
-//                }
-//                GlobalScope.launch(Dispatchers.Main) {
-//                    view.loadDataWithBaseURL(
-//                        baseUrl,
-//                        htmlData,
-//                        "text/html",
-//                        "UTF-8",
-//                        null)
-//                }
-//            }
-//        }
+        view.visibility = View.INVISIBLE
+
+        val nestedScrollView: NestedScrollView? = activity?.findViewById(R.id.nestedScrollView)
+        nestedScrollView?.fullScroll(View.FOCUS_UP);
+        nestedScrollView?.scrollTo(0,0);
     }
 
     override fun onPageFinished(view: WebView, url: String) {
         super.onPageFinished(view, url)
-//        view.visibility = View.VISIBLE
-//        injectCSS(view)
-//
-//        GlobalScope.launch(Dispatchers.IO) {
-//            Thread.sleep(1000)
-//            GlobalScope.launch(Dispatchers.Main) {
-//                view.visibility = View.VISIBLE
-//            }
-//        }
+
+        view.visibility = View.VISIBLE
     }
 
     init {
@@ -136,18 +116,15 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
 
     private fun injectCSS(view: WebView) {
         try {
-//            val inputStream: InputStream = activity!!.assets.open("style.css")
-//            val buffer = ByteArray(inputStream.available())
-//            inputStream.read(buffer)
-//            inputStream.close()
-//            val encoded: String = Base64.encodeToString(buffer, Base64.NO_WRAP)
-//            val js = "var style = document.createElement('style'); style.innerHTML = window.atob('$encoded'); " +
-//                    "document.head.appendChild(style);"
-            val css = "file:///android_asset/style.css"
-            val js = "var link = document.createElement('link'); link.setAttribute('href','$css'); " +
-                    "link.setAttribute('rel', 'stylesheet'); link.setAttribute('type','text/css'); " +
-                    "document.head.appendChild(link);"
-            view.evaluateJavascript(js,null)
+            val inputStream: InputStream = activity!!.assets.open("style.css")
+            val buffer = ByteArray(inputStream.available())
+            inputStream.read(buffer)
+            inputStream.close()
+            val encoded: String = Base64.encodeToString(buffer, Base64.NO_WRAP)
+            val js = "(function() {if (document.styleSheets.length > 0) { " +
+                    "var style = document.createElement('style'); style.innerHTML = window.atob('$encoded'); " +
+                    "document.head.appendChild(style); return true} else {return false}})();"
+            view.evaluateJavascript(js, null)
         }
         catch (e: Exception) {
             e.printStackTrace()
