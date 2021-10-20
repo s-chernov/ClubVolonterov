@@ -14,6 +14,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
+import android.widget.Button
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.NestedScrollView
@@ -102,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         val navigation = findViewById<View>(R.id.navigation) as BottomNavigationView
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
 
+
         mAnimationDrawable?.start()
 
         onbHomeClick()
@@ -125,6 +127,11 @@ class MainActivity : AppCompatActivity() {
 
     fun onbMessagesClick() {
         webView.loadUrl("https://www.club-volonterov.ru/phpBB3/ucp.php?i=pm&folder=inbox")
+    }
+
+    fun bDownClick(view: View) {
+        val nestedScrollView: NestedScrollView = findViewById(R.id.nestedScrollView)
+        nestedScrollView.scrollTo(0, webView.bottom)
     }
 
     private fun openImageChooserActivity() {
