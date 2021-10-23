@@ -1,6 +1,5 @@
 package com.qfree.clubvolonterov
 
-import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Intent
@@ -10,17 +9,17 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Base64
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
-import android.widget.Button
-import android.widget.ImageView
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.NestedScrollView
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.internal.ContextUtils.getActivity
 import java.io.InputStream
+
+import androidx.drawerlayout.widget.DrawerLayout
+import android.widget.AdapterView.OnItemClickListener
 
 
 class MainActivity : AppCompatActivity() {
@@ -28,110 +27,60 @@ class MainActivity : AppCompatActivity() {
     private var uploadMessage: ValueCallback<Uri>? = null
     private var uploadMessageAboveL: ValueCallback<Array<Uri>>? = null
     private var mAnimationDrawable: AnimationDrawable? = null
+    private var mScreenTitles: Array<String>? = null
+    private var mDrawerLayout: DrawerLayout? = null
+    private var mDrawerList: ListView? = null
 
+    //Нижнее меню
     private val mOnNavigationItemSelectedListener =
         BottomNavigationView.OnNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.bHome-> {
-                    onbHomeClick()
+                    webView.loadUrl(getString(R.string.baseURL))
                     return@OnNavigationItemSelectedListener true
                 }
                 R.id.bActive -> {
-                    onbActiveClick()
+                    webView.loadUrl(getString(R.string.baseURL) + "search.php?search_id=active_topics")
                     return@OnNavigationItemSelectedListener true
                 }
                 R.id.bMessages -> {
-                    onbMessagesClick()
+                    webView.loadUrl(getString(R.string.baseURL) + "ucp.php?i=pm&folder=inbox")
                     return@OnNavigationItemSelectedListener true
                 }
             }
             false
         }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        val imageView = findViewById<View>(R.id.spinner) as ImageView
-        imageView.setBackgroundResource(R.drawable.spinner)
-
-        mAnimationDrawable = imageView.background as AnimationDrawable
-
-        webView = findViewById(R.id.webView)
-        webView.webViewClient = SimpleWebViewClientImpl(this)
-        webView.settings.javaScriptEnabled = true
-        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
-        webView.settings.domStorageEnabled = true
-        webView.settings.allowContentAccess = true
-        webView.webChromeClient = object : WebChromeClient() {
-
-            // For Android < 3.0
-            fun openFileChooser(valueCallback: ValueCallback<Uri>) {
-                uploadMessage = valueCallback
-                openImageChooserActivity()
-            }
-
-            // For Android  >= 3.0
-            fun openFileChooser(valueCallback: ValueCallback<Uri>, acceptType: String) {
-                uploadMessage = valueCallback
-                openImageChooserActivity()
-            }
-
-            //For Android  >= 4.1
-            fun openFileChooser(
-                valueCallback: ValueCallback<Uri>,
-                acceptType: String,
-                capture: String
-            ) {
-                uploadMessage = valueCallback
-                openImageChooserActivity()
-            }
-
-            // For Android >= 5.0
-            override fun onShowFileChooser(
-                webView: WebView,
-                filePathCallback: ValueCallback<Array<Uri>>,
-                fileChooserParams: WebChromeClient.FileChooserParams
-            ): Boolean {
-                uploadMessageAboveL = filePathCallback
-                openImageChooserActivity()
-                return true
-            }
-        }
-
-        val navigation = findViewById<View>(R.id.navigation) as BottomNavigationView
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
-
-
-        mAnimationDrawable?.start()
-
-        onbHomeClick()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
-            webView.goBack()
-            return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
-    fun onbHomeClick() {
-        webView.loadUrl("https://www.club-volonterov.ru/phpBB3/index.php")
-    }
-
-    fun onbActiveClick() {
-        webView.loadUrl("https://www.club-volonterov.ru/phpBB3/search.php?search_id=active_topics")
-    }
-
-    fun onbMessagesClick() {
-        webView.loadUrl("https://www.club-volonterov.ru/phpBB3/ucp.php?i=pm&folder=inbox")
+    //Боковые кнопки
+    fun bUpClick(view: View) {
+        scrollView(0, 0)
+        visibilityUpDown(View.INVISIBLE, View.VISIBLE)
     }
 
     fun bDownClick(view: View) {
+        scrollView(0, webView.bottom)
+        visibilityUpDown(View.VISIBLE, View.INVISIBLE)
+    }
+
+    private fun scrollView(x: Int, y: Int) {
         val nestedScrollView: NestedScrollView = findViewById(R.id.nestedScrollView)
-        nestedScrollView.scrollTo(0, webView.bottom)
+        nestedScrollView.scrollTo(x, y)
+
+    }
+
+    private fun visibilityUpDown(upView: Int, downView: Int) {
+        val bUp: Button = findViewById(R.id.bUp)
+        bUp.visibility = upView
+
+        val bDown: Button = findViewById(R.id.bDown)
+        bDown.visibility = downView
+    }
+
+
+    //Выбор файла
+    companion object {
+        private val FILE_CHOOSER_RESULT_CODE = 10000
     }
 
     private fun openImageChooserActivity() {
@@ -177,17 +126,107 @@ class MainActivity : AppCompatActivity() {
         uploadMessageAboveL = null
     }
 
-    companion object {
-        private val FILE_CHOOSER_RESULT_CODE = 10000
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        //Меню
+        mScreenTitles = resources.getStringArray(R.array.screen_array)
+        mDrawerLayout = findViewById(R.id.drawer_layout)
+        mDrawerList = findViewById(R.id.left_drawer)
+        mDrawerList!!.adapter = ArrayAdapter<String>(this,
+            R.layout.drawer_list_item, mScreenTitles as Array<out String>)
+        mDrawerList!!.setOnItemClickListener { parent, view, position, id ->
+            var url: String = getString(R.string.baseURL)
+            when (position) {
+                0 -> url += "app.php/calendar/"
+                1 -> url += ""
+                2 -> url += ""
+                else -> {url = ""}
+            }
+
+            if (url != "") {
+                mDrawerLayout!!.closeDrawer(mDrawerList!!)
+                webView.loadUrl(url)
+            }
+        }
+
+
+        val navigation = findViewById<View>(R.id.navigation) as BottomNavigationView
+        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
+
+
+        val imageView = findViewById<View>(R.id.spinner) as ImageView
+        imageView.setBackgroundResource(R.drawable.spinner)
+
+        mAnimationDrawable = imageView.background as AnimationDrawable
+        mAnimationDrawable?.start()
+
+
+        webView = findViewById(R.id.webView)
+        webView.webViewClient = SimpleWebViewClientImpl(this)
+        webView.settings.javaScriptEnabled = true
+        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+        webView.settings.domStorageEnabled = true
+        webView.settings.allowContentAccess = true
+        webView.webChromeClient = object : WebChromeClient() {
+
+            // For Android < 3.0
+            fun openFileChooser(valueCallback: ValueCallback<Uri>) {
+                uploadMessage = valueCallback
+                openImageChooserActivity()
+            }
+
+            // For Android  >= 3.0
+            fun openFileChooser(valueCallback: ValueCallback<Uri>, acceptType: String) {
+                uploadMessage = valueCallback
+                openImageChooserActivity()
+            }
+
+            //For Android  >= 4.1
+            fun openFileChooser(
+                valueCallback: ValueCallback<Uri>,
+                acceptType: String,
+                capture: String
+            ) {
+                uploadMessage = valueCallback
+                openImageChooserActivity()
+            }
+
+            // For Android >= 5.0
+            override fun onShowFileChooser(
+                webView: WebView,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: WebChromeClient.FileChooserParams
+            ): Boolean {
+                uploadMessageAboveL = filePathCallback
+                openImageChooserActivity()
+                return true
+            }
+        }
+        webView.loadUrl(getString(R.string.baseURL))
     }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+            webView.goBack()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
 }
 
 class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
     private var activity: Activity? = null
 
+    init {
+        this.activity = activity
+    }
+
     override fun onLoadResource(view: WebView, url: String) {
         super.onLoadResource(view, url)
-        Log.e("res", url)
 
         injectCSS(view)
     }
@@ -206,11 +245,18 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
         super.onPageStarted(view, url, favicon)
 
         view.visibility = View.INVISIBLE
-        changeSpinnerVisible(View.VISIBLE)
+        changeSpinnerVisible(0)
+
 
         val nestedScrollView: NestedScrollView? = activity?.findViewById(R.id.nestedScrollView)
         nestedScrollView?.fullScroll(View.FOCUS_UP);
         nestedScrollView?.scrollTo(0,0);
+
+        val bUp: Button? = activity?.findViewById(R.id.bUp)
+        bUp?.visibility = View.INVISIBLE
+
+        val bDown: Button? = activity?.findViewById(R.id.bDown)
+        bDown?.visibility = View.VISIBLE
     }
 
     override fun onPageFinished(view: WebView, url: String) {
@@ -218,19 +264,17 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
 
         view.evaluateJavascript(" document.getElementById(\"add_files\").type = \"file\";", null)
 
-        changeSpinnerVisible(View.INVISIBLE)
+        changeSpinnerVisible(4)
         view.visibility = View.VISIBLE
     }
 
-    init {
-        this.activity = activity
-    }
-
+    //Отображение анимации загрузки
     private fun changeSpinnerVisible(res: Int) {
         var spinner: ImageView = activity!!.findViewById(R.id.spinner)
         spinner.visibility = res
     }
 
+    //Свой CSS
     private fun injectCSS(view: WebView) {
         try {
             val inputStream: InputStream = activity!!.assets.open("style.css")
@@ -248,3 +292,4 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
         }
     }
 }
+
