@@ -1,10 +1,4 @@
 <resources>
     <string name="app_name">Клуб Волонтеров</string>
     <string name="baseURL">https://www.club-volonterov.ru/phpBB3/</string>
-
-    <string-array name="screen_array">
-        <item>Screen 1</item>
-        <item>Screen 2</item>
-        <item>Screen 3</item>
-    </string-array>
 </resources>

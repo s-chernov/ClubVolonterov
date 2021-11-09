@@ -3,8 +3,10 @@ package com.qfree.clubvolonterov
 import android.annotation.TargetApi
 import android.app.Activity
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import android.graphics.drawable.AnimationDrawable
+import android.graphics.Color
+import android.graphics.ColorSpace
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,46 +15,29 @@ import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
 import android.widget.*
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
 import androidx.core.widget.NestedScrollView
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import java.io.InputStream
-
 import androidx.drawerlayout.widget.DrawerLayout
-import android.widget.AdapterView.OnItemClickListener
+import com.bumptech.glide.Glide
+import com.google.android.material.navigation.NavigationView
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.InputStream
+import org.json.JSONTokener
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var uploadMessage: ValueCallback<Uri>? = null
     private var uploadMessageAboveL: ValueCallback<Array<Uri>>? = null
-    private var mAnimationDrawable: AnimationDrawable? = null
-    private var mScreenTitles: Array<String>? = null
-    private var mDrawerLayout: DrawerLayout? = null
-    private var mDrawerList: ListView? = null
 
-    //Нижнее меню
-    private val mOnNavigationItemSelectedListener =
-        BottomNavigationView.OnNavigationItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.bHome-> {
-                    webView.loadUrl(getString(R.string.baseURL))
-                    return@OnNavigationItemSelectedListener true
-                }
-                R.id.bActive -> {
-                    webView.loadUrl(getString(R.string.baseURL) + "search.php?search_id=active_topics")
-                    return@OnNavigationItemSelectedListener true
-                }
-                R.id.bMessages -> {
-                    webView.loadUrl(getString(R.string.baseURL) + "ucp.php?i=pm&folder=inbox")
-                    return@OnNavigationItemSelectedListener true
-                }
-            }
-            false
-        }
-
-
-    //Боковые кнопки
+    //Скроллинг
     fun bUpClick(view: View) {
         scrollView(0, 0)
         visibilityUpDown(View.INVISIBLE, View.VISIBLE)
@@ -70,10 +55,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun visibilityUpDown(upView: Int, downView: Int) {
-        val bUp: Button = findViewById(R.id.bUp)
+        val bUp: ImageButton = findViewById(R.id.bUp)
         bUp.visibility = upView
 
-        val bDown: Button = findViewById(R.id.bDown)
+        val bDown: ImageButton = findViewById(R.id.bDown)
         bDown.visibility = downView
     }
 
@@ -131,38 +116,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        //Меню
-        mScreenTitles = resources.getStringArray(R.array.screen_array)
-        mDrawerLayout = findViewById(R.id.drawer_layout)
-        mDrawerList = findViewById(R.id.left_drawer)
-        mDrawerList!!.adapter = ArrayAdapter<String>(this,
-            R.layout.drawer_list_item, mScreenTitles as Array<out String>)
-        mDrawerList!!.setOnItemClickListener { parent, view, position, id ->
-            var url: String = getString(R.string.baseURL)
-            when (position) {
-                0 -> url += "app.php/calendar/"
-                1 -> url += ""
-                2 -> url += ""
-                else -> {url = ""}
-            }
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        val drawer: DrawerLayout = findViewById(R.id.drawer_layout)
+        val toggle = ActionBarDrawerToggle(this, drawer, toolbar, 0, 0)
+        drawer.addDrawerListener(toggle)
+        toggle.syncState()
 
-            if (url != "") {
-                mDrawerLayout!!.closeDrawer(mDrawerList!!)
-                webView.loadUrl(url)
-            }
+        val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipe_container)
+        swipeRefreshLayout.setOnRefreshListener {
+            webView.loadUrl(webView.url!!)
+            swipeRefreshLayout.isRefreshing = false
         }
-
-
-        val navigation = findViewById<View>(R.id.navigation) as BottomNavigationView
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener)
-
-
-        val imageView = findViewById<View>(R.id.spinner) as ImageView
-        imageView.setBackgroundResource(R.drawable.spinner)
-
-        mAnimationDrawable = imageView.background as AnimationDrawable
-        mAnimationDrawable?.start()
-
 
         webView = findViewById(R.id.webView)
         webView.webViewClient = SimpleWebViewClientImpl(this)
@@ -205,17 +169,21 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
-        webView.loadUrl(getString(R.string.baseURL))
+        webView.loadUrl(getString(R.string.baseURL) + "index.php")
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+        val drawer: DrawerLayout = findViewById(R.id.drawer_layout)
+
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START)
+            return true
+        } else if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
             webView.goBack()
             return true
         }
         return super.onKeyDown(keyCode, event)
     }
-
 }
 
 class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
@@ -245,18 +213,17 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
         super.onPageStarted(view, url, favicon)
 
         view.visibility = View.INVISIBLE
-        changeSpinnerVisible(0)
+        changeSpinnerVisible(View.VISIBLE)
 
+        val nestedScrollView: NestedScrollView = activity!!.findViewById(R.id.nestedScrollView)
+        nestedScrollView.fullScroll(View.FOCUS_UP);
+        nestedScrollView.scrollTo(0,0);
 
-        val nestedScrollView: NestedScrollView? = activity?.findViewById(R.id.nestedScrollView)
-        nestedScrollView?.fullScroll(View.FOCUS_UP);
-        nestedScrollView?.scrollTo(0,0);
+        val bUp: ImageButton = activity!!.findViewById(R.id.bUp)
+        bUp.visibility = View.INVISIBLE
 
-        val bUp: Button? = activity?.findViewById(R.id.bUp)
-        bUp?.visibility = View.INVISIBLE
-
-        val bDown: Button? = activity?.findViewById(R.id.bDown)
-        bDown?.visibility = View.VISIBLE
+        val bDown: ImageButton = activity!!.findViewById(R.id.bDown)
+        bDown.visibility = View.VISIBLE
     }
 
     override fun onPageFinished(view: WebView, url: String) {
@@ -264,13 +231,17 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
 
         view.evaluateJavascript(" document.getElementById(\"add_files\").type = \"file\";", null)
 
-        changeSpinnerVisible(4)
+        changeSpinnerVisible(View.INVISIBLE)
+
         view.visibility = View.VISIBLE
+
+        getMenuLinks(view)
+        getUser(view)
     }
 
     //Отображение анимации загрузки
     private fun changeSpinnerVisible(res: Int) {
-        var spinner: ImageView = activity!!.findViewById(R.id.spinner)
+        val spinner: CircularProgressIndicator = activity!!.findViewById(R.id.spinner)
         spinner.visibility = res
     }
 
@@ -291,5 +262,92 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
             e.printStackTrace()
         }
     }
-}
 
+    //Ссылки для меню
+    private fun getMenuLinks(view: WebView) {
+        view.evaluateJavascript("(function() {var res = [];" +
+                "document.getElementById('quick-links').remove();" +
+                "Array.from(document.getElementById('nav-main').querySelectorAll('[role=\"menuitem\"]')).map(elem =>" +
+                "{res.push({text:elem.text.trim(), href:elem.href});});" +
+                "return JSON.stringify(res);})()")
+        { json:String ->
+            if (!json.isNullOrBlank() && !json.equals("null")) {
+                var jArray = JSONArray(JSONTokener(json).nextValue().toString())
+                val nav_menu: NavigationView = activity!!.findViewById(R.id.nav_view)
+                nav_menu.menu.clear()
+
+                nav_menu.menu.add("Главная").setOnMenuItemClickListener {
+                    view.loadUrl("https://www.club-volonterov.ru/phpBB3/index.php")
+
+                    val drawer = activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
+                    drawer.closeDrawer(GravityCompat.START)
+
+                    true
+                }
+
+                if (jArray.length() > 3) {
+                    val str = jArray.getJSONObject(jArray.length() - 1)
+                    nav_menu.menu.add(str.get("text").toString()).setOnMenuItemClickListener {
+                        view.loadUrl(str.get("href").toString())
+
+                        val drawer =
+                            activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
+                        drawer.closeDrawer(GravityCompat.START)
+
+                        true
+                    }
+
+                    jArray.remove(jArray.length() - 1)
+                }
+
+                for (i in 0 until jArray.length()) {
+                    val str = jArray.getJSONObject(i)
+                    nav_menu.menu.add(str.get("text").toString()).setOnMenuItemClickListener {
+                        view.loadUrl(str.get("href").toString())
+
+                        val drawer =
+                            activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
+                        drawer.closeDrawer(GravityCompat.START)
+
+                        true
+                    }
+                }
+            }
+        }
+    }
+
+    //Данные пользователя
+    private fun getUser(view: WebView) {
+        view.evaluateJavascript("(function() {" +
+                "let sAvatar = document.getElementsByClassName('avatar');" +
+                "let sName = document.getElementsByClassName('username-coloured');" +
+                "return JSON.stringify({url:sAvatar[0].getAttribute('src')," +
+                "name:sName[0].textContent});})()")
+        { json:String ->
+            var userPhoto: ImageView = activity!!.findViewById(R.id.userPhoto)
+            var userName: TextView = activity!!.findViewById(R.id.userName)
+
+            if (!json.isNullOrBlank() && json != "null") {
+                if (userName.text == "") {
+                    var jObject = JSONObject(JSONTokener(json).nextValue().toString())
+
+                    userName.text = jObject.getString("name")
+
+                    Glide
+                        .with(activity!!)
+                        .load(
+                            "https://www.club-volonterov.ru/phpBB3/" + jObject.getString("url")
+                                .drop(1)
+                        )
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_profile_placeholder)
+                        .into(userPhoto)
+                }
+            } else {
+                userPhoto.setImageDrawable(null)
+                userName.text = ""
+            }
+        }
+    }
+
+}
