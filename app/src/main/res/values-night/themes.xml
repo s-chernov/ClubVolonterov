@@ -1,22 +1,18 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.ClubVolonterov" parent="Theme.MaterialComponents.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/ic_launcher_background</item>
-        <item name="colorPrimaryVariant">@color/ic_launcher_background</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/ic_launcher_background</item>
-        <item name="colorSecondaryVariant">@color/ic_launcher_background</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+    <style name="Theme.ClubVolonterov" parent="Theme.Material3.Light.NoActionBar">
         <!-- Customize your theme here. -->
-        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:colorPrimary">@color/ic_launcher_background</item>
+        <item name="android:colorPrimaryDark">@color/ic_launcher_background</item>
+        <item name="android:textColorPrimary">@color/white</item>
+
         <item name="android:listDivider">@color/grey</item>
+        <item name="materialDrawerStyle">@style/Widget.MaterialDrawerStyle</item>
+        <item name="materialDrawerHeaderStyle">@style/Widget.MaterialDrawerHeaderStyle</item>
     </style>
 
     <style name="SplashTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowBackground">@drawable/background_splash</item>
     </style>
+
 </resources>

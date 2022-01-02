@@ -7,7 +7,8 @@
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:openDrawer="start">
+    tools:openDrawer="start"
+    android:fitsSystemWindows="true">
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
@@ -19,8 +20,7 @@
             android:id="@+id/appbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.MaterialComponents.AppBarLayout.PrimarySurface"
-            android:fitsSystemWindows="true" >
+            android:background="@color/ic_launcher_background">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
@@ -29,7 +29,7 @@
                 android:background="@android:color/transparent"
                 android:elevation="0dp"
                 app:navigationIcon="@drawable/round_menu_white_36"
-                app:title="@string/app_name" />
+                app:title="@string/app_name"/>
 
         </com.google.android.material.appbar.AppBarLayout>
 
@@ -95,14 +95,11 @@
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
+    <com.mikepenz.materialdrawer.widget.MaterialDrawerSliderView
+        android:id="@+id/slider"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@color/white"
-        android:fitsSystemWindows="true"
-        app:headerLayout="@layout/header_navigation_drawer"
-        app:itemTextColor="@color/black" />
+        android:fitsSystemWindows="true" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

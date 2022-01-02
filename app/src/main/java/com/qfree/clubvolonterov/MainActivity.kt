@@ -2,15 +2,18 @@ package com.qfree.clubvolonterov
 
 import android.annotation.TargetApi
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ColorSpace
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.*
@@ -30,6 +33,23 @@ import java.io.InputStream
 import org.json.JSONTokener
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
+import android.widget.Toast
+
+import android.widget.AdapterView
+import com.bumptech.glide.load.resource.bitmap.TransformationUtils.circleCrop
+import com.mikepenz.materialdrawer.holder.BadgeStyle
+import com.mikepenz.materialdrawer.holder.ColorHolder
+import com.mikepenz.materialdrawer.holder.ImageHolder
+import com.mikepenz.materialdrawer.holder.StringHolder
+import com.mikepenz.materialdrawer.model.*
+
+import com.mikepenz.materialdrawer.model.interfaces.*
+import com.mikepenz.materialdrawer.util.AbstractDrawerImageLoader
+import com.mikepenz.materialdrawer.util.DrawerImageLoader
+import com.mikepenz.materialdrawer.util.getPlaceHolder
+import com.mikepenz.materialdrawer.widget.AccountHeaderView
+import com.mikepenz.materialdrawer.widget.MaterialDrawerSliderView
+import kotlinx.coroutines.withContext
 
 
 class MainActivity : AppCompatActivity() {
@@ -116,11 +136,32 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        // Инициализируем Toolbar
         val drawer: DrawerLayout = findViewById(R.id.drawer_layout)
-        val toggle = ActionBarDrawerToggle(this, drawer, toolbar, 0, 0)
+        val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
+        setSupportActionBar(toolbar)
+        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+        var toggle = ActionBarDrawerToggle(
+            this,
+            drawer,
+            toolbar,
+            com.mikepenz.materialdrawer.R.string.material_drawer_open,
+            com.mikepenz.materialdrawer.R.string.material_drawer_close
+        )
         drawer.addDrawerListener(toggle)
         toggle.syncState()
+
+
+        DrawerImageLoader.init(object : AbstractDrawerImageLoader() {
+            override fun set(imageView: ImageView, uri: Uri, placeholder: Drawable, tag: String?) {
+                Glide.with(imageView.context).load(uri).circleCrop().placeholder(placeholder).into(imageView)
+            }
+
+            override fun cancel(imageView: ImageView) {
+                Glide.with(imageView.context).clear(imageView)
+            }
+        })
+
 
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.swipe_container)
         swipeRefreshLayout.setOnRefreshListener {
@@ -169,7 +210,13 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         }
-        webView.loadUrl(getString(R.string.baseURL) + "index.php")
+
+        var url = intent.data.toString()
+        if (intent.data == null) {
+            url = getString(R.string.baseURL) + "index.php";
+        }
+
+        webView.loadUrl(url)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -271,46 +318,42 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
                 "{res.push({text:elem.text.trim(), href:elem.href});});" +
                 "return JSON.stringify(res);})()")
         { json:String ->
-            if (!json.isNullOrBlank() && !json.equals("null")) {
+            if (!json.isNullOrBlank() && json != "null") {
                 var jArray = JSONArray(JSONTokener(json).nextValue().toString())
-                val nav_menu: NavigationView = activity!!.findViewById(R.id.nav_view)
-                nav_menu.menu.clear()
+                val slider: MaterialDrawerSliderView = activity!!.findViewById(R.id.slider)
 
-                nav_menu.menu.add("Главная").setOnMenuItemClickListener {
-                    view.loadUrl("https://www.club-volonterov.ru/phpBB3/index.php")
+                slider.itemAdapter.clear()
+                slider.itemAdapter.add(PrimaryDrawerItem().apply { nameText = "Главная";
+                    onDrawerItemClickListener = { dview: View?, iDrawerItem: IDrawerItem<*>, i: Int ->
+                        view.loadUrl("https://www.club-volonterov.ru/phpBB3/index.php")
 
-                    val drawer = activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
-                    drawer.closeDrawer(GravityCompat.START)
-
-                    true
-                }
-
-                if (jArray.length() > 3) {
-                    val str = jArray.getJSONObject(jArray.length() - 1)
-                    nav_menu.menu.add(str.get("text").toString()).setOnMenuItemClickListener {
-                        view.loadUrl(str.get("href").toString())
-
-                        val drawer =
-                            activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
-                        drawer.closeDrawer(GravityCompat.START)
-
-                        true
-                    }
-
-                    jArray.remove(jArray.length() - 1)
-                }
+                        false
+                } })
 
                 for (i in 0 until jArray.length()) {
                     val str = jArray.getJSONObject(i)
-                    nav_menu.menu.add(str.get("text").toString()).setOnMenuItemClickListener {
-                        view.loadUrl(str.get("href").toString())
+                    var strTxt = str.get("text").toString()
+                    var strBadge = ""
+                    var indx = i + 1
 
-                        val drawer =
-                            activity!!.findViewById<View>(R.id.drawer_layout) as DrawerLayout
-                        drawer.closeDrawer(GravityCompat.START)
-
-                        true
+                    if (strTxt.contains("Личные сообщения")) {
+                        strBadge = strTxt.substringAfter("Личные сообщения").trim()
+                        strTxt = "Личные сообщения"
+                        indx = 2
                     }
+
+                    slider.itemAdapter.add(indx, PrimaryDrawerItem().apply { nameText = strTxt; badgeText = strBadge;
+                        badgeStyle = BadgeStyle().apply {
+                            if (strBadge.isNotEmpty() && strBadge != "0") {
+                                textColor = ColorHolder.fromColor(Color.WHITE);
+                                color = ColorHolder.fromColorRes(R.color.md_red_700)
+                            }
+                        };
+                        onDrawerItemClickListener = { dview: View?, iDrawerItem: IDrawerItem<*>, i: Int ->
+                            view.loadUrl(str.get("href").toString())
+
+                            false
+                        } })
                 }
             }
         }
@@ -318,36 +361,46 @@ class SimpleWebViewClientImpl(activity: Activity?) : WebViewClient() {
 
     //Данные пользователя
     private fun getUser(view: WebView) {
-        view.evaluateJavascript("(function() {" +
-                "let sAvatar = document.getElementsByClassName('avatar');" +
-                "let sName = document.getElementsByClassName('username-coloured');" +
-                "return JSON.stringify({url:sAvatar[0].getAttribute('src')," +
-                "name:sName[0].textContent});})()")
-        { json:String ->
-            var userPhoto: ImageView = activity!!.findViewById(R.id.userPhoto)
-            var userName: TextView = activity!!.findViewById(R.id.userName)
+        view.evaluateJavascript(
+            "(function() {" +
+                    "let sAvatar = document.getElementsByClassName('avatar');" +
+                    "let sName = document.getElementsByClassName('username-coloured');" +
+                    "return JSON.stringify({url:sAvatar[0].getAttribute('src')," +
+                    "name:sName[0].textContent});})()"
+        )
+        { json: String ->
+//            var userPhoto: ImageView = activity!!.findViewById(R.id.userPhoto)
+//            var userName: TextView = activity!!.findViewById(R.id.userName)
+            val headerView = AccountHeaderView(activity!!)
+            headerView.attachToSliderView(activity!!.findViewById(R.id.slider))
+            headerView.headerBackground = ImageHolder(R.drawable.header)
+            headerView.selectionListEnabledForSingleProfile = false
+
 
             if (!json.isNullOrBlank() && json != "null") {
-                if (userName.text == "") {
                     var jObject = JSONObject(JSONTokener(json).nextValue().toString())
 
-                    userName.text = jObject.getString("name")
-
-                    Glide
-                        .with(activity!!)
-                        .load(
-                            "https://www.club-volonterov.ru/phpBB3/" + jObject.getString("url")
-                                .drop(1)
+                    headerView.apply {
+                        addProfile(
+                            ProfileDrawerItem().apply {
+                                nameText = jObject.getString("name");
+                                iconUrl =
+                                    "https://www.club-volonterov.ru/phpBB3/" + jObject.getString("url").drop(1);
+                            },
+                            0
                         )
-                        .circleCrop()
-                        .placeholder(R.drawable.ic_profile_placeholder)
-                        .into(userPhoto)
-                }
+                    }
             } else {
-                userPhoto.setImageDrawable(null)
-                userName.text = ""
+                headerView.apply {
+                    addProfile(
+                        ProfileDrawerItem().apply {
+                            nameText = "";
+                            iconRes = R.drawable.ic_profile_placeholder
+                        },
+                        0
+                    )
+                }
             }
         }
     }
-
 }
